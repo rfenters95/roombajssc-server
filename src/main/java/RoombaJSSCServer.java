@@ -1,4 +1,3 @@
-import com.maschel.roomba.RoombaJSSC;
 import com.maschel.roomba.RoombaJSSCServerSerial;
 
 import java.io.IOException;
@@ -11,7 +10,7 @@ public class RoombaJSSCServer {
 
     public static void main(String[] args) {
         try {
-            RoombaJSSC roomba = new RoombaJSSCServerSerial();
+            RoombaJSSCServerSerial roomba = new RoombaJSSCServerSerial();
             ServerSocket serverSocket = new ServerSocket(13950);
 
             // Handle marco polo and connection before comm loop
@@ -64,9 +63,8 @@ public class RoombaJSSCServer {
                                 bytes[i] = Byte.parseByte(scanner.nextLine());
                             }
                             roomba.send(bytes);
-                            RoombaJSSCServerSerial serverSerial = (RoombaJSSCServerSerial) roomba;
-                            if (serverSerial.hasSensorData()) {
-                                byte[] sensorData = serverSerial.getSensorData();
+                            if (roomba.hasSensorData()) {
+                                byte[] sensorData = roomba.getSensorData();
                                 printWriter.println("SEND BYTES");
                                 printWriter.println(sensorData.length);
                                 for (byte b : sensorData) {
