@@ -39,8 +39,8 @@ public class RoombaJSSCServer {
 
                             printWriter.println("OK PORTS");
                             String[] ports = roomba.portList();
+                            printWriter.println(ports.length);
                             if (ports.length != 0) {
-                                printWriter.println(ports.length + 1);
                                 for (String s : ports) {
                                     printWriter.println(s);
                                 }
