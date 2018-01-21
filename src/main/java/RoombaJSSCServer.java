@@ -1,4 +1,5 @@
 import com.maschel.roomba.RoombaJSSCServerSerial;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -8,21 +9,22 @@ import java.util.Scanner;
 
 public class RoombaJSSCServer {
 
+    private final static Logger LOGGER = Logger.getLogger(RoombaJSSCServer.class);
+
     public static void main(String[] args) {
         try {
-            RoombaJSSCServerSerial roomba = new RoombaJSSCServerSerial();
-            ServerSocket serverSocket = new ServerSocket(13950);
 
-            // Handle marco polo and connection before comm loop
+            final RoombaJSSCServerSerial roomba = new RoombaJSSCServerSerial();
+            final ServerSocket serverSocket = new ServerSocket(13950);
+
             while (true) {
-                System.out.println("Server entered main loop");
-
+                LOGGER.debug("Server entered main loop.");
                 Socket socket;
                 Scanner scanner;
                 PrintWriter printWriter;
 
                 while (true) {
-                    System.out.println("Server entered ping loop");
+                    LOGGER.debug("Server entered discovery loop.");
 
                     socket = serverSocket.accept();
                     scanner = new Scanner(socket.getInputStream());
@@ -30,70 +32,91 @@ public class RoombaJSSCServer {
 
                     if (scanner.hasNextLine()) {
                         String message = scanner.nextLine();
+
+                        // Potential client requesting serial port information.
                         if (message.equalsIgnoreCase("PORTS")) {
-                            System.out.println("Received ports");
+                            LOGGER.debug("Server received PORTS message.");
+
                             printWriter.println("OK PORTS");
                             String[] ports = roomba.portList();
-                            printWriter.println(ports.length + 1);
-                            for (String s : ports) {
-                                printWriter.println(s);
-                                System.out.println("Sent " + s);
+                            if (ports.length != 0) {
+                                printWriter.println(ports.length + 1);
+                                for (String s : ports) {
+                                    printWriter.println(s);
+                                }
+                            } else {
+                                LOGGER.info("No ports detected!");
                             }
-                            // delete after dev ends
-                            printWriter.println("DEBUG");
-                            System.out.println("Sent DEBUG");
+
+                            // Client requesting to connect with server.
                         } else if (message.equalsIgnoreCase("CONNECT")) {
-                            System.out.println("Received connect");
+                            LOGGER.debug("Server received CONNECT message.");
                             String device = scanner.nextLine();
                             printWriter.println("CONNECTED " + device);
                             break;
+
+                            // Invalid message received.
+                        } else {
+                            LOGGER.warn("Server received an invalid message.");
+                            LOGGER.warn(message);
                         }
                     }
                 }
 
-                // Loop communication with client
                 while (true) {
-                    System.out.println("Entered comm loop");
+                    LOGGER.debug("Server entered communications loop.");
+
                     if (scanner.hasNextLine()) {
                         String message = scanner.nextLine();
+
                         if (message.equalsIgnoreCase("SEND BYTES")) {
+                            LOGGER.debug("Server received SEND BYTES message.");
+
+                            // Redirect bytes to roomba.
                             int length = Integer.parseInt(scanner.nextLine());
                             byte[] bytes = new byte[length];
                             for (int i = 0; i < length; i++) {
                                 bytes[i] = Byte.parseByte(scanner.nextLine());
                             }
                             roomba.send(bytes);
+
+                            // Check for sensor data.
                             if (roomba.hasSensorData()) {
+
+                                // Send sensor data.
                                 byte[] sensorData = roomba.getSensorData();
                                 printWriter.println("SEND BYTES");
                                 printWriter.println(sensorData.length);
                                 for (byte b : sensorData) {
                                     printWriter.println(b);
                                 }
-                                System.out.println("Sent bytes");
                             }
-                            System.out.println("Received bytes");
+
                             printWriter.println("DONE");
+
                         } else if (message.equalsIgnoreCase("SEND INT")) {
+                            LOGGER.debug("Server received SEND INT message.");
+
                             int value = Integer.parseInt(scanner.nextLine());
                             roomba.send(value);
-                            System.out.println("Received int");
                             printWriter.println("DONE");
+
                         } else if (message.equalsIgnoreCase("DISCONNECT")) {
-                            System.out.println("Disconnecting");
+                            LOGGER.debug("Server received DISCONNECT message.");
+
                             printWriter.println("OKAY");
                             socket.close();
                             break;
+
                         } else {
-                            System.out.println("Error!");
+                            LOGGER.warn("Server received an invalid message.");
+                            LOGGER.warn(message);
                         }
                     }
                 }
-
-                System.out.println("Starting new main loop iteration");
             }
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            LOGGER.error(e.getMessage(), e);
         }
     }
 }
