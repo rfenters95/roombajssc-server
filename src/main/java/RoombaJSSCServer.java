@@ -52,6 +52,7 @@ public class RoombaJSSCServer {
                         } else if (message.equalsIgnoreCase("CONNECT")) {
                             LOGGER.debug("Server received CONNECT message.");
                             String device = scanner.nextLine();
+			                roomba.connect(device);
                             printWriter.println("CONNECTED " + device);
                             break;
 
